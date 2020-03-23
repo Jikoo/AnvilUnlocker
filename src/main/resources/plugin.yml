@@ -1,0 +1,6 @@
+name: ${project.name}
+main: ${project.groupId}.${project.artifactId}.${project.name}
+version: ${project.version}
+api-version: "1.15"
+author: Jikoo
+softdepend: ["ProtocolLib"]
