@@ -7,11 +7,14 @@ import java.lang.reflect.InvocationTargetException;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public class AnvilUnlocker extends JavaPlugin implements Listener {
 
@@ -20,27 +23,44 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 		getServer().getPluginManager().registerEvents(this, this);
 	}
 
-	@EventHandler
-	private void onInventoryOpen(InventoryOpenEvent event) {
-		if (event.getInventory() instanceof AnvilInventory anvilInventory
-				&& event.getPlayer() instanceof Player player
-				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-			int maximumCost = getConfig().getInt("maximumcost");
-			anvilInventory.setMaximumRepairCost(maximumCost);
+	@EventHandler(priority = EventPriority.MONITOR)
+	private void onInventoryOpen(@NotNull InventoryOpenEvent event) {
+		if (!(event.getInventory() instanceof AnvilInventory anvilInventory)) {
+			return;
+		}
+
+		int maximumCost = getConfig().getInt("maximumcost");
+		anvilInventory.setMaximumRepairCost(maximumCost);
+
+		if (event.getPlayer() instanceof Player player
+				&& player.getGameMode() != GameMode.CREATIVE) {
 			setInstantBuild(player, true);
 		}
 	}
 
-	@EventHandler
-	private void onInventoryClose(InventoryCloseEvent event) {
+	@EventHandler(priority = EventPriority.MONITOR)
+	private void onInventoryClose(@NotNull InventoryCloseEvent event) {
 		if (event.getInventory() instanceof AnvilInventory
 				&& event.getPlayer() instanceof Player player
-				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+				&& player.getGameMode() != GameMode.CREATIVE) {
 			setInstantBuild(player, false);
 		}
 	}
 
-	public void setInstantBuild(Player player, boolean instantBuild) {
+	@EventHandler(priority = EventPriority.MONITOR)
+	private void onPrepareAnvil(@NotNull PrepareAnvilEvent event) {
+		if (!(event.getView().getPlayer() instanceof Player player)
+				|| player.getGameMode() == GameMode.CREATIVE) {
+			return;
+		}
+
+		getServer().getScheduler().runTask(this, () -> {
+			AnvilInventory anvil = event.getInventory();
+			setInstantBuild(player, anvil.getRepairCost() < anvil.getMaximumRepairCost());
+		});
+	}
+
+	public void setInstantBuild(@NotNull Player player, boolean instantBuild) {
 		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ABILITIES);
 		packet.getBooleans().write(0, player.isInvulnerable());
 		packet.getBooleans().write(1, player.isFlying());
