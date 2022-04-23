@@ -22,19 +22,21 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 
 	@EventHandler
 	private void onInventoryOpen(InventoryOpenEvent event) {
-		if (event.getInventory() instanceof AnvilInventory && event.getPlayer() instanceof Player
+		if (event.getInventory() instanceof AnvilInventory anvilInventory
+				&& event.getPlayer() instanceof Player player
 				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
 			int maximumCost = getConfig().getInt("maximumcost");
-			((AnvilInventory) event.getInventory()).setMaximumRepairCost(maximumCost);
-			setInstantBuild((Player) event.getPlayer(), true);
+			anvilInventory.setMaximumRepairCost(maximumCost);
+			setInstantBuild(player, true);
 		}
 	}
 
 	@EventHandler
 	private void onInventoryClose(InventoryCloseEvent event) {
-		if (event.getInventory() instanceof AnvilInventory && event.getPlayer() instanceof Player
+		if (event.getInventory() instanceof AnvilInventory
+				&& event.getPlayer() instanceof Player player
 				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-			setInstantBuild((Player) event.getPlayer(), false);
+			setInstantBuild(player, false);
 		}
 	}
 
