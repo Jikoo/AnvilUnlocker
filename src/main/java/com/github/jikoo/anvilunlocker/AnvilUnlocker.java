@@ -18,9 +18,21 @@ import org.jetbrains.annotations.NotNull;
 
 public class AnvilUnlocker extends JavaPlugin implements Listener {
 
+	private int maximumCost = Short.MAX_VALUE;
+
 	@Override
 	public void onEnable() {
+		saveDefaultConfig();
+
+		maximumCost = constrainAnvilMax(getConfig().getInt("maximumCost"));
+
 		getServer().getPluginManager().registerEvents(this, this);
+	}
+
+	@Override
+	public void reloadConfig() {
+		super.reloadConfig();
+		maximumCost = constrainAnvilMax(getConfig().getInt("maximumCost"));
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
@@ -29,7 +41,6 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 			return;
 		}
 
-		int maximumCost = getConfig().getInt("maximumcost");
 		anvilInventory.setMaximumRepairCost(maximumCost);
 
 		if (event.getPlayer() instanceof Player player
@@ -74,6 +85,10 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 		} catch (InvocationTargetException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private static int constrainAnvilMax(int actual) {
+		return Math.min(Short.MAX_VALUE, Math.max(41, actual));
 	}
 
 }
