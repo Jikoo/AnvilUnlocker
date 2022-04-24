@@ -37,31 +37,31 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 
 	@EventHandler(priority = EventPriority.MONITOR)
 	private void onInventoryOpen(@NotNull InventoryOpenEvent event) {
-		if (!(event.getInventory() instanceof AnvilInventory anvilInventory)) {
+		if (!(event.getInventory() instanceof AnvilInventory)) {
 			return;
 		}
 
-		anvilInventory.setMaximumRepairCost(maximumCost);
+		((AnvilInventory) event.getInventory()).setMaximumRepairCost(maximumCost);
 
-		if (event.getPlayer() instanceof Player player
-				&& player.getGameMode() != GameMode.CREATIVE) {
-			setInstantBuild(player, true);
+		if (event.getPlayer() instanceof Player
+				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+			setInstantBuild((Player) event.getPlayer(), true);
 		}
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
 	private void onInventoryClose(@NotNull InventoryCloseEvent event) {
 		if (event.getInventory() instanceof AnvilInventory
-				&& event.getPlayer() instanceof Player player
-				&& player.getGameMode() != GameMode.CREATIVE) {
-			setInstantBuild(player, false);
+				&& event.getPlayer() instanceof Player
+				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+			setInstantBuild((Player) event.getPlayer(), false);
 		}
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
 	private void onPrepareAnvil(@NotNull PrepareAnvilEvent event) {
-		if (!(event.getView().getPlayer() instanceof Player player)
-				|| player.getGameMode() == GameMode.CREATIVE) {
+		if (!(event.getView().getPlayer() instanceof Player)
+				|| event.getView().getPlayer().getGameMode() == GameMode.CREATIVE) {
 			return;
 		}
 
