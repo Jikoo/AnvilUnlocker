@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+  pull_request_target:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Set Up Java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '17'
+
+      # Use cache to speed up build
+      - name: Cache Maven Repo
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+
+      - name: Build With Maven
+        run: mvn -e clean package -am -P all
+
+      # Upload artifacts
+      - name: Upload Distributable Jar
+        id: upload-final
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: ./target/AnvilUnlocker.jar
+
+  release:
+    name: Create Github Release
+    needs: [ build ]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v2
+
+      - name: Parse Tag Name
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+      - name: Create Release
+        id: create-release
+        uses: softprops/action-gh-release@v0.1.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: AnvilUnlocker ${{ steps.get_version.outputs.result }}
+          draft: true
+          prerelease: true
+          files: ./dist/AnvilUnlocker.jar
