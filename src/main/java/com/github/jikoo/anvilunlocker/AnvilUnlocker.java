@@ -5,39 +5,81 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import java.lang.reflect.InvocationTargetException;
 import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.AnvilInventory;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 public class AnvilUnlocker extends JavaPlugin implements Listener {
 
+	private int maximumCost = Short.MAX_VALUE;
+
 	@Override
 	public void onEnable() {
+		saveDefaultConfig();
+
+		maximumCost = constrainAnvilMax(getConfig().getInt("maximumCost"));
+
 		getServer().getPluginManager().registerEvents(this, this);
 	}
 
-	@EventHandler
-	public void onInventoryOpen(InventoryOpenEvent event) {
-		if (event.getInventory() instanceof AnvilInventory && event.getPlayer() instanceof Player
+	@Override
+	public void reloadConfig() {
+		super.reloadConfig();
+		maximumCost = constrainAnvilMax(getConfig().getInt("maximumCost"));
+	}
+
+	@EventHandler(priority = EventPriority.MONITOR)
+	private void onInventoryOpen(@NotNull InventoryOpenEvent event) {
+		if (!(event.getInventory() instanceof AnvilInventory)) {
+			return;
+		}
+
+		((AnvilInventory) event.getInventory()).setMaximumRepairCost(maximumCost);
+
+		if (event.getPlayer() instanceof Player
 				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-			((AnvilInventory) event.getInventory()).setMaximumRepairCost(Short.MAX_VALUE);
 			setInstantBuild((Player) event.getPlayer(), true);
 		}
 	}
 
-	@EventHandler
-	public void onInventoryClose(InventoryCloseEvent event) {
-		if (event.getInventory() instanceof AnvilInventory && event.getPlayer() instanceof Player
+	@EventHandler(priority = EventPriority.MONITOR)
+	private void onInventoryClose(@NotNull InventoryCloseEvent event) {
+		if (event.getInventory() instanceof AnvilInventory
+				&& event.getPlayer() instanceof Player
 				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
 			setInstantBuild((Player) event.getPlayer(), false);
 		}
 	}
 
-	public void setInstantBuild(Player player, boolean instantBuild) {
+	@EventHandler(priority = EventPriority.MONITOR)
+	private void onPrepareAnvil(@NotNull PrepareAnvilEvent event) {
+		if (!(event.getView().getPlayer() instanceof Player)
+				|| event.getView().getPlayer().getGameMode() == GameMode.CREATIVE) {
+			return;
+		}
+
+		getServer().getScheduler().runTask(this, () -> {
+			AnvilInventory anvil = event.getInventory();
+			ItemStack input2 = anvil.getItem(1);
+			setInstantBuild(
+					(Player) event.getView().getPlayer(),
+					// Prevent "Too Expensive!" with no secondary input.
+					input2 == null || input2.getType() == Material.AIR
+							// Display "Too Expensive!" if cost meets or exceeds maximum.
+							|| anvil.getRepairCost() < anvil.getMaximumRepairCost());
+		});
+	}
+
+	public void setInstantBuild(@NotNull Player player, boolean instantBuild) {
 		PacketContainer packet = new PacketContainer(PacketType.Play.Server.ABILITIES);
 		packet.getBooleans().write(0, player.isInvulnerable());
 		packet.getBooleans().write(1, player.isFlying());
@@ -51,6 +93,10 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 		} catch (InvocationTargetException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private static int constrainAnvilMax(int actual) {
+		return Math.min(Short.MAX_VALUE, Math.max(41, actual));
 	}
 
 }
