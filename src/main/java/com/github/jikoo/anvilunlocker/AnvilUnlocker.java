@@ -5,6 +5,7 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import java.lang.reflect.InvocationTargetException;
 import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -13,6 +14,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.AnvilInventory;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -67,7 +69,13 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 
 		getServer().getScheduler().runTask(this, () -> {
 			AnvilInventory anvil = event.getInventory();
-			setInstantBuild(player, anvil.getRepairCost() < anvil.getMaximumRepairCost());
+			ItemStack input2 = anvil.getItem(1);
+			setInstantBuild(
+					(Player) event.getView().getPlayer(),
+					// Prevent "Too Expensive!" with no secondary input.
+					input2 == null || input2.getType() == Material.AIR
+							// Display "Too Expensive!" if cost meets or exceeds maximum.
+							|| anvil.getRepairCost() < anvil.getMaximumRepairCost());
 		});
 	}
 
