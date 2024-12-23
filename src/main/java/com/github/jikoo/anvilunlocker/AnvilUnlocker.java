@@ -3,7 +3,6 @@ package com.github.jikoo.anvilunlocker;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
-import java.lang.reflect.InvocationTargetException;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -11,7 +10,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.ItemStack;
@@ -38,20 +36,6 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 	}
 
 	@EventHandler(priority = EventPriority.MONITOR)
-	private void onInventoryOpen(@NotNull InventoryOpenEvent event) {
-		if (!(event.getInventory() instanceof AnvilInventory)) {
-			return;
-		}
-
-		((AnvilInventory) event.getInventory()).setMaximumRepairCost(maximumCost);
-
-		if (event.getPlayer() instanceof Player
-				&& event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-			setInstantBuild((Player) event.getPlayer(), true);
-		}
-	}
-
-	@EventHandler(priority = EventPriority.MONITOR)
 	private void onInventoryClose(@NotNull InventoryCloseEvent event) {
 		if (event.getInventory() instanceof AnvilInventory
 				&& event.getPlayer() instanceof Player
@@ -67,8 +51,10 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 			return;
 		}
 
+		AnvilInventory anvil = event.getInventory();
+		anvil.setMaximumRepairCost(maximumCost);
+
 		getServer().getScheduler().runTask(this, () -> {
-			AnvilInventory anvil = event.getInventory();
 			ItemStack input2 = anvil.getItem(1);
 			setInstantBuild(
 					(Player) event.getView().getPlayer(),
@@ -88,11 +74,7 @@ public class AnvilUnlocker extends JavaPlugin implements Listener {
 		packet.getFloat().write(0, player.getFlySpeed() / 2);
 		packet.getFloat().write(1, player.getWalkSpeed() / 2);
 
-		try {
-			ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		}
+		ProtocolLibrary.getProtocolManager().sendServerPacket(player, packet);
 	}
 
 	private static int constrainAnvilMax(int actual) {
